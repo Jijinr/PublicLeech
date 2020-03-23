@@ -14,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 import os
 import re
 
-await message.reply_link
+await message.reply_leech
 MAGNETIC_LINK_REGEX = r"magnet\:\?xt\=urn\:btih\:([A-F\d]+)"
 
 
