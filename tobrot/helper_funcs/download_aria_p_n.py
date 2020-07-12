@@ -13,6 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 import aria2p
 import asyncio
+import configparser
 import os
 from tobrot.helper_funcs.upload_to_tg import upload_to_tg
 from tobrot.helper_funcs.create_compressed_archive import create_archive
@@ -22,7 +23,12 @@ from tobrot import (
     MAX_TIME_TO_WAIT_FOR_TORRENTS_TO_START,
     AUTH_CHANNEL,
     DOWNLOAD_LOCATION,
-    EDIT_SLEEP_TIME_OUT
+    EDIT_SLEEP_TIME_OUT,
+    R_CLONE_CONF_URI
+)
+from tobrot.helper_funcs.r_clone import (
+    get_r_clone_config,
+    copy_via_rclone
 )
 
 
@@ -43,7 +49,7 @@ async def aria_start():
     aria2_daemon_start_cmd.append(f"--rpc-listen-port={ARIA_TWO_STARTED_PORT}")
     aria2_daemon_start_cmd.append("--rpc-max-request-size=1024M")
     aria2_daemon_start_cmd.append("--seed-ratio=0.0")
-    aria2_daemon_start_cmd.append("--seed-time=1")
+    aria2_daemon_start_cmd.append("--seed-time=0.01")
     aria2_daemon_start_cmd.append("--split=10")
     aria2_daemon_start_cmd.append(f"--bt-stop-timeout={MAX_TIME_TO_WAIT_FOR_TORRENTS_TO_START}")
     #
@@ -84,6 +90,26 @@ def add_magnet(aria_instance, magnetic_link, c_file_name):
         return True, "" + download.gid + ""
 
 
+def add_torrent(aria_instance, torrent_file_path):
+    if torrent_file_path is None:
+        return False, "**FAILED** \n" + str(e) + " \nsomething wrongings when trying to add <u>TORRENT</u> file"
+    if os.path.exists(torrent_file_path):
+        # Add Torrent Into Queue
+        try:
+            download = aria_instance.add_torrent(
+                torrent_file_path,
+                uris=None,
+                options=None,
+                position=None
+            )
+        except Exception as e:
+            return False, "**FAILED** \n" + str(e) + " \nPlease do not send SLOW links. Read /help"
+        else:
+            return True, "" + download.gid + ""
+    else:
+        return False, "**FAILED** \n" + str(e) + " \nPlease try other sources to get workable link"
+
+
 def add_url(aria_instance, text_url, c_file_name):
     options = None
     # if c_file_name is not None:
@@ -103,15 +129,18 @@ def add_url(aria_instance, text_url, c_file_name):
         return True, "" + download.gid + ""
 
 
-async def call_apropriate_function(
+async def fake_etairporpa_call(
     aria_instance,
     incoming_link,
     c_file_name,
     sent_message_to_update_tg_p,
-    is_zip
+    r_clone_header_xedni
 ):
-    if incoming_link.startswith("magnet:"):
+    # TODO: duplicate code -_-
+    if incoming_link.lower().startswith("magnet:"):
         sagtus, err_message = add_magnet(aria_instance, incoming_link, c_file_name)
+    elif incoming_link.lower().endswith(".torrent"):
+        sagtus, err_message = add_torrent(aria_instance, incoming_link)
     else:
         sagtus, err_message = add_url(aria_instance, incoming_link, c_file_name)
     if not sagtus:
@@ -124,7 +153,73 @@ async def call_apropriate_function(
         sent_message_to_update_tg_p,
         None
     )
-    if incoming_link.startswith("magnet:") or incoming_link.lower().endswith(".torrent"):
+    if incoming_link.startswith("magnet:"):
+        #
+        err_message = await check_metadata(aria_instance, err_message)
+        #
+        await asyncio.sleep(1)
+        if err_message is not None:
+            await check_progress_for_dl(
+                aria_instance,
+                err_message,
+                sent_message_to_update_tg_p,
+                None
+            )
+        else:
+            return False, "can't get metadata \n\n#stopped"
+    await asyncio.sleep(1)
+    file = aria_instance.get_download(err_message)
+    to_upload_file = file.name
+    #
+    r_clone_conf_file = await get_r_clone_config(
+        R_CLONE_CONF_URI,
+        sent_message_to_update_tg_p._client
+    )
+    if r_clone_conf_file is not None: # how? even :\
+        config = configparser.ConfigParser()
+        config.read(r_clone_conf_file)
+        remote_names = config.sections()
+        try:
+            required_remote = remote_names[r_clone_header_xedni]
+        except IndexError:
+            return False, "maybe a bug, but index seems not valid"
+        await copy_via_rclone(
+            to_upload_file,
+            required_remote,
+            "/", # assuming '/' is the default location for uploads
+            r_clone_conf_file
+        )
+        await sent_message_to_update_tg_p.reply_text(
+            "files might be uploaded in the desired remote "
+            "please check Logs for any erros"
+        )
+        return True, None
+
+
+async def call_apropriate_function(
+    aria_instance,
+    incoming_link,
+    c_file_name,
+    sent_message_to_update_tg_p,
+    is_zip
+):
+    if incoming_link.lower().startswith("magnet:"):
+        sagtus, err_message = add_magnet(aria_instance, incoming_link, c_file_name)
+    elif incoming_link.lower().endswith(".torrent"):
+        sagtus, err_message = add_torrent(aria_instance, incoming_link)
+    else:
+        sagtus, err_message = add_url(aria_instance, incoming_link, c_file_name)
+    if not sagtus:
+        return sagtus, err_message
+    LOGGER.info(err_message)
+    # https://stackoverflow.com/a/58213653/4723940
+    await check_progress_for_dl(
+        aria_instance,
+        err_message,
+        sent_message_to_update_tg_p,
+        None
+    )
+    if incoming_link.startswith("magnet:"):
         #
         err_message = await check_metadata(aria_instance, err_message)
         #
@@ -164,7 +259,7 @@ async def call_apropriate_function(
     for key_f_res_se in final_response:
         local_file_name = key_f_res_se
         message_id = final_response[key_f_res_se]
-        channel_id = str(AUTH_CHANNEL)[4:]
+        channel_id = str(sent_message_to_update_tg_p.chat.id)[4:]
         private_link = f"https://t.me/c/{channel_id}/{message_id}"
         message_to_send += "👉 <a href='"
         message_to_send += private_link
@@ -209,6 +304,12 @@ async def check_progress_for_dl(aria2, gid, event, previous_message):
                 msg += f"\nSpeed: {file.download_speed_string()} 🔽 / {file.upload_speed_string()} 🔼"
                 msg += f"\nProgress: {file.progress_string()}"
                 msg += f"\nTotal Size: {file.total_length_string()}"
+
+                if file.seeder is None :
+                   msg += f"\n<b>Connections:</b> {file.connections}"
+                else :
+                   msg += f"\n<b>Info:</b>[ P : {file.connections} || S : {file.num_seeders} ]"
+
                 # msg += f"\nStatus: {file.status}"
                 msg += f"\nETA: {file.eta_string()}"
                 msg += f"\n<code>/cancel {gid}</code>"

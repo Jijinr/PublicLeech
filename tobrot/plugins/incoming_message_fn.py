@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# (c) Shrimadhav U K
+# (c) Shrimadhav U K / Akshay C
 
 # the logging things
 import logging
@@ -20,53 +20,38 @@ from tobrot import (
 
 
 import time
+import aria2p
+import asyncio
 from tobrot.helper_funcs.extract_link_from_message import extract_link
 from tobrot.helper_funcs.download_aria_p_n import call_apropriate_function, aria_start
 from tobrot.helper_funcs.download_from_link import request_download
 from tobrot.helper_funcs.display_progress import progress_for_pyrogram
 from tobrot.helper_funcs.youtube_dl_extractor import extract_youtube_dl_formats
+from tobrot.helper_funcs.admin_check import AdminCheck
+from tobrot.helper_funcs.create_r_o_m import get_markup
+
+        
+async def incoming_purge_message_f(client, message):
+    """/purge command"""
+    i_m_sefg2 = await message.reply_text("Purging...", quote=True)
+    if await AdminCheck(client, message.chat.id, message.from_user.id):
+        aria_i_p = await aria_start()
+        # Show All Downloads
+        downloads = aria_i_p.get_downloads()
+        for download in downloads:
+            LOGGER.info(download.remove(force=True))
+    await i_m_sefg2.delete()
 
 
 async def incoming_message_f(client, message):
     """/leech command"""
-    i_m_sefg = await message.reply_text("processing", quote=True)
-    is_zip = False
-    if len(message.command) > 1:
-        if message.command[1] == "archive":
-            is_zip = True
-    # get link from the incoming message
-    dl_url, cf_name = extract_link(message.reply_to_message)
-    LOGGER.info(dl_url)
-    LOGGER.info(cf_name)
-    if dl_url is not None:
-        await i_m_sefg.edit_text("extracting links")
-        # start the aria2c daemon
-        aria_i_p = await aria_start()
-        LOGGER.info(aria_i_p)
-        current_user_id = message.from_user.id
-        # create an unique directory
-        new_download_location = os.path.join(
-            DOWNLOAD_LOCATION,
-            str(current_user_id),
-            str(time.time())
-        )
-        # create download directory, if not exist
-        if not os.path.isdir(new_download_location):
-            os.makedirs(new_download_location)
-        await i_m_sefg.edit_text("trying to download")
-        # try to download the "link"
-        sagtus, err_message = await call_apropriate_function(
-            aria_i_p,
-            dl_url,
-            new_download_location,
-            i_m_sefg,
-            is_zip
-        )
-        if not sagtus:
-            # if FAILED, display the error message
-            await i_m_sefg.edit_text(err_message)
-    else:
-        await i_m_sefg.edit_text("**FCUK**! wat have you entered. Please read /help")
+    i_m_sefg = await message.reply_text("checking ", quote=True)
+    t_, rm_ = await get_markup(message)
+    await i_m_sefg.edit_text(
+        text=t_,
+        reply_markup=rm_,
+        disable_web_page_preview=True
+    )
 
 
 async def incoming_youtube_dl_f(client, message):
@@ -74,7 +59,9 @@ async def incoming_youtube_dl_f(client, message):
     i_m_sefg = await message.reply_text("processing", quote=True)
     # LOGGER.info(message)
     # extract link from message
-    dl_url, cf_name = extract_link(message.reply_to_message)
+    dl_url, cf_name, yt_dl_user_name, yt_dl_pass_word = await extract_link(
+        message.reply_to_message, "YTDL"
+    )
     LOGGER.info(dl_url)
     LOGGER.info(cf_name)
     if dl_url is not None:
@@ -86,14 +73,28 @@ async def incoming_youtube_dl_f(client, message):
         if not os.path.isdir(user_working_dir):
             os.makedirs(user_working_dir)
         # list the formats, and display in button markup formats
-        text_message, reply_markup = await extract_youtube_dl_formats(
+        thumb_image, text_message, reply_markup = await extract_youtube_dl_formats(
             dl_url,
+            # cf_name,
+            yt_dl_user_name,
+            yt_dl_pass_word,
             user_working_dir
         )
-        await i_m_sefg.edit_text(
-            text=text_message,
-            reply_markup=reply_markup
-        )
+        if thumb_image is not None:
+            await message.reply_photo(
+                photo=thumb_image,
+                quote=True,
+                caption=text_message,
+                reply_markup=reply_markup
+            )
+            await i_m_sefg.delete()
+        else:
+            await i_m_sefg.edit_text(
+                text=text_message,
+                reply_markup=reply_markup
+            )
     else:
-        # if no links found, delete the "processing" message
-        await i_m_sefg.delete()
+        await i_m_sefg.edit_text(
+            "**FCUK**! wat have you entered. \nPlease read /help \n"
+            f"<b>API Error</b>: {cf_name}"
+        )

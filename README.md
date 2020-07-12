@@ -1,12 +1,12 @@
-# Telegram Torrent Leecher 🔥🤖
+# ~~Telegram~~ Torrent / YouTube Leecher 🔥🤖
 
-A Telegram Torrent (and youtube-dl) Leecher based on [Pyrogram](https://github.com/pyrogram/pyrogram)
+A Telegram Torrent, youtube-dl Leecher, and rClone / Telegram Uploader!
 
 ## installing
 
-### The Easy Way
+## You can also tap the Deploy To Heroku button below to deploy straight to Heroku!
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/TGExplore/PublicLeech/tree/master)
 
 ### The Legacy Way
 Simply clone the repository and run the main file:
@@ -14,7 +14,7 @@ Simply clone the repository and run the main file:
 ```sh
 git clone https://github.com/SpEcHiDe/PublicLeech.git
 cd PublicLeech
-virtualenv -p /usr/bin/python3 venv
+python3 -m venv venv
 . ./venv/bin/activate
 pip install -r requirements.txt
 # <Create config.py appropriately>
@@ -26,10 +26,14 @@ python3 -m tobrot
 from tobrot.sample_config import Config
 
 class Config(Config):
-  TG_BOT_TOKEN = ""
+  TG_BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+  # These example values won't work. You must get your own app_id and
+  # api_hash from https://my.telegram.org, under API Development.
   APP_ID = 6
   API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
-  AUTH_CHANNEL = -1001234567890
+  # please read https://t.me/c/1279877202/74
+  # if you have not read the above README
+  AUTH_CHANNEL = [-1001234567890]
 ```
 
 ### Variable Explanations
@@ -42,7 +46,9 @@ class Config(Config):
 * `API_HASH`: Get these two values from [my.telegram.org/apps](https://my.telegram.org/apps).
   * N.B.: if Telegram is blocked by your ISP, try our [Telegram bot](https://telegram.dog/UseTGXBot) to get the IDs.
 
-* `AUTH_CHANNEL`: Create a Super Group in Telegram, add `@GoogleIMGBot` to the group, and send /id in the chat, to get this value.
+* `AUTH_CHANNEL`:
+Create a Super Group in Telegram, add `@GoogleIMGBot` to the group, and send /id in the chat, to get this value.
+You can add multiple IDs seperated by space.
 
 ##### Optional Configuration Variables
 
@@ -68,19 +74,22 @@ class Config(Config):
 
 * `MAX_TIME_TO_WAIT_FOR_TORRENTS_TO_START`
 
+* `FINISHED_PROGRESS_STR`
+
+* `UN_FINISHED_PROGRESS_STR`
+
+* `TG_OFFENSIVE_API`
+
+* `R_CLONE_CONF_URI`
+![a help, maybe](https://telegra.ph/file/073bcbc0b69b03d75ea04.jpg)
 
 ## Available Commands
 
-* `/ytdl`: This command should be used as reply to a [supported link](https://ytdl-org.github.io/youtube-dl/supportedsites.html)
-
-* `/leech`: This command should be used as reply to a magnetic link, a torrent link, or a direct link. [this command will SPAM the chat and send the downloads a seperate files, if there is more than one file, in the specified torrent]
-
-* `/leech archive`: This command should be used as reply to a magnetic link, a torrent link, or a direct link. [This command will create a .tar.gz file of the output directory, and send the files in the chat, splited into PARTS of 1024MiB each, due to Telegram limitations]
-
+* No Commands. 👉 BUTTONS better 👈
 
 ## How to Use?
 
-* send any one of the available command, as a reply to a valid link.
+* send any link, and click on the available buttons.
 
 * if file is larger than 1500MB, [read this](https://t.me/c/1434259219/113).
 
@@ -89,7 +98,9 @@ class Config(Config):
 
 ## Issues or Feature Requests
 
-* search for known issues, [here](https://t.me/c/1434259219/118).
+* For FeedBack and Suggestions, please feel free to say in [InFoTel Group](https://telegram.dog/InFoTelGroup)
+
+* search for known issues, [here](https://t.me/c/1434259219/118) or in the [GitHub Issues](https://github.com/SpEcHiDe/PublicLeech/issues).
 
 * add issues / feature requests, [here](https://github.com/SpEcHiDe/PublicLeech/issues/new).
 
@@ -100,4 +111,6 @@ class Config(Config):
 * [Robots](https://telegram.dog/Robots) for their [@UploadBot](https://telegram.dog/UploadBot)
 * [@AjeeshNair](https://telegram.dog/AjeeshNait) for his [torrent.ajee.sh](https://torrent.ajee.sh)
 * [@gotstc](https://telegram.dog/gotstc), @aryanvikash, [@HasibulKabir](https://telegram.dog/HasibulKabir) for their TORRENT groups
+* [rClone Team](https://github.com/rclone/rclone)
+* [gautamajay52](https://github.com/gautamajay52/TorrentLeech-Gdrive)
 * [![CopyLeft](https://telegra.ph/file/b514ed14d994557a724cb.jpg)](https://telegra.ph/file/fab1017e21c42a5c1e613.mp4 "CopyLeft Credit Video")
